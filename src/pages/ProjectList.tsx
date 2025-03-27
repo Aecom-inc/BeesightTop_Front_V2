@@ -107,19 +107,10 @@ const ProjectList: React.FC = () => {
         <table className="text-sm tableborder1 tablepadding1">
           <thead>
             <tr>
-              <th>
-                ステータス/
-                <br />
-                プロジェクト名
-              </th>
-              <th className="w-1/8">
-                認証回数 /<br />
-                可能数
-              </th>
-              <th className="w-1/6">
-                利用開始 /<br />
-                終了日
-              </th>
+              <th>ステータス/<br />プロジェクト名</th>
+              <th className="w-1/6">API Key</th>
+              <th className="w-1/8">認証回数 /<br />可能数</th>
+              <th className="w-1/6">利用開始 /<br />終了日</th>
               <th className="w-1/6">API Key</th>
               <th className="w-1/6">補足情報</th>
               <th className="w-1/8 text-center">操作</th>
@@ -143,10 +134,10 @@ const ProjectList: React.FC = () => {
                   <p className="font-bold mt-2">
                     <a
                       href="#"
-                      className="text-blue-500 underline cursor-pointer"
+                      className="underline cursor-pointer"
                       onClick={() => navigate(`/project/${project.project_id}`)}
                     >
-                      {project.name}/{project.project_id}
+                      {project.name}
                     </a>
                   </p>
                 </td>

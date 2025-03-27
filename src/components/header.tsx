@@ -8,14 +8,14 @@ const Header: React.FC = () => {
         <a href="#/" className="flex items-center">
           {/* SVGロゴ */}
           <img src="/images/aecomkun.svg" alt="Aecomkun" className="w-8 h-8 mr-2" />
-          <span className="beesight-red font-bold text-lg">Beesight TOP</span>
+          <span className="beesight-red font-bold text-lg">Beesight TOP V2</span>
         </a>
       </div>
       <div className="flex items-center mr-4">
         <span>
           <User size={24} />
         </span>
-        <span>ユーザー名</span>
+        {/* <span>ユーザー名</span> */}
       </div>
     </header>
   );

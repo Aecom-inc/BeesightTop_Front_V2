@@ -174,7 +174,19 @@ const AuthHistory: React.FC = () => {
                   <td>{data.api_key}</td>
                   <td>{data.terminal_name}</td>
                   <td>{data.serial_no}</td>
-                  <td>{data.result}</td>
+                  <td>
+                    <span
+                      className={`px-3 py-1 rounded-full text-center ${
+                        data.result === 'success'
+                          ? 'bg-green-100'
+                          : data.result === 'failure'
+                            ? 'bg-red-100'
+                            : 'bg-yellow-100'
+                      }`}
+                    >
+                      {data.result}
+                    </span>
+                  </td>
                   <td>{data.authenticate_at}</td>
                   <td>{data.auth_msg}</td>
                   <td>

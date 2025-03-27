@@ -2,10 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Footer from '../components/footer';
 
+// ★ 追加
+import api from '../services/api';
+
 interface License {
   license_id: number;
   name: string;
-  // 他に必要があれば追加
+  // ...
 }
 
 interface FormData {
@@ -17,7 +20,6 @@ interface FormData {
 }
 
 const AppRegister: React.FC = () => {
-  // ▼ フォームデータ
   const [formData, setFormData] = useState<FormData>({
     name: '',
     version: '',
@@ -26,7 +28,7 @@ const AppRegister: React.FC = () => {
     license_ids: [],
   });
 
-  // ▼ ライセンス一覧
+  // ライセンス一覧
   const [allLicenses, setAllLicenses] = useState<License[]>([]);
 
   const [loading, setLoading] = useState(false);
@@ -34,50 +36,39 @@ const AppRegister: React.FC = () => {
   const [errorDetail, setErrorDetail] = useState<any>(null);
   const [success, setSuccess] = useState(false);
 
-  // ① `/api/licenses` を fetch → ライセンス一覧を取得
+  // 1) /api/licenses を axios で取得
   useEffect(() => {
     const fetchLicenses = async () => {
       try {
-        const res = await fetch('https://85ef-163-44-52-101.ngrok-free.app/api/licenses', {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'ngrok-skip-browser-warning': 'true',
-          },
-        });
-        if (!res.ok) {
-          throw new Error(`ライセンス一覧取得エラー (ステータス: ${res.status})`);
-        }
-        const result = await res.json();
+        // ★ fetch → api.license.getAllLicenses に置き換え
+        const result = await api.license.getAllLicenses();
         if (result.success) {
-          // result.data はライセンスの配列
-          // 例: [{"license_id":20,"name":"repudiandaeライセンス",...}, {...}, ...]
           setAllLicenses(result.data);
         } else {
+          setError('ライセンス一覧の取得に失敗しました');
         }
       } catch (err: any) {
+        setError('ライセンス一覧取得中にエラーが発生: ' + err.message);
       }
     };
     fetchLicenses();
   }, []);
 
-  // ② 入力フォームの変更ハンドラ
+  // 入力フォーム
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  // ③ ライセンスチェックボックスの変更ハンドラ
+  // ライセンスチェックボックス
   const handleLicenseCheckbox = (licenseId: number, checked: boolean) => {
     setFormData((prev) => {
       const current = [...prev.license_ids];
       if (checked) {
-        // チェックされた → 追加
         if (!current.includes(licenseId)) {
           current.push(licenseId);
         }
       } else {
-        // チェック解除 → 削除
         const index = current.indexOf(licenseId);
         if (index !== -1) {
           current.splice(index, 1);
@@ -87,7 +78,7 @@ const AppRegister: React.FC = () => {
     });
   };
 
-  // ④ フォーム送信 → POST
+  // 2) POST → 新規登録
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -96,38 +87,20 @@ const AppRegister: React.FC = () => {
     setSuccess(false);
 
     try {
-
-      const response = await fetch('https://85ef-163-44-52-101.ngrok-free.app/api/apps', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'ngrok-skip-browser-warning': 'true',
-        },
-        body: JSON.stringify(formData),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
-        if (errorData && errorData.errors) {
-          setError('入力値が不正です。');
-          setErrorDetail(errorData.errors);
-        } else if (errorData && errorData.message) {
-          setError(errorData.message);
-          setErrorDetail(errorData);
-        } else {
-          setError(`アプリ登録に失敗しました (ステータス: ${response.status})`);
-        }
-        return;
-      }
-
-      const result = await response.json();
-
+      // ★ fetch → api.app.createApp(formData) に変更
+      const result = await api.app.createApp(formData);
       if (!result.success) {
-        throw new Error(result.message || 'アプリ登録に失敗しました');
+        // サーバー側でバリデーションNGなど
+        if (result.errors) {
+          setErrorDetail(result.errors);
+          throw new Error(result.message || '入力値が不正です。');
+        } else {
+          throw new Error(result.message || 'アプリ登録に失敗しました');
+        }
       }
 
       setSuccess(true);
-      // フォームをリセット
+      // フォームリセット
       setFormData({
         name: '',
         version: '',
@@ -145,7 +118,6 @@ const AppRegister: React.FC = () => {
   return (
     <div>
       <h1 className="title1">アプリ新規登録</h1>
-
       {loading && <p className="text-gray-500">登録処理中...</p>}
       {error && <p className="text-red-500">{error}</p>}
       {errorDetail && (

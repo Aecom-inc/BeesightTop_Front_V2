@@ -2,6 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import Footer from '../components/footer';
 
+// ★ 追加
+import api from '../services/api';
+import { AppData } from '../services/api';
+
 interface License {
   license_id: number;
   name: string;
@@ -13,12 +17,6 @@ interface AppFormData {
   status: string;
   description: string;
   license_ids: number[];
-}
-
-interface ApiResponse {
-  success: boolean;
-  message?: string;
-  data?: any;
 }
 
 const AppEdit: React.FC = () => {
@@ -33,7 +31,7 @@ const AppEdit: React.FC = () => {
     license_ids: [],
   });
 
-  // 既存アプリ読み込みの状態
+  // ステータス管理
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [errorDetail, setErrorDetail] = useState<any>(null);
@@ -42,39 +40,28 @@ const AppEdit: React.FC = () => {
   // ライセンス一覧
   const [allLicenses, setAllLicenses] = useState<License[]>([]);
 
-  // 1) 既存アプリ情報をGET
+  // 1) 既存アプリ情報を GET
   useEffect(() => {
-    const fetchApp = async () => {
+    const fetchAppData = async () => {
       if (!app_id) {
         setError('app_id が存在しません');
         setLoading(false);
         return;
       }
       try {
-        const res = await fetch(`https://85ef-163-44-52-101.ngrok-free.app/api/apps/${app_id}`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'ngrok-skip-browser-warning': 'true',
-          },
-        });
-        if (!res.ok) {
-          throw new Error(`アプリ詳細の取得に失敗しました (ステータス: ${res.status})`);
-        }
-        const result: ApiResponse = await res.json();
+        // ★ fetch → api.app.getAppById に変更
+        const result = await api.app.getAppById(app_id);
         if (!result.success || !result.data) {
           throw new Error(result.message || 'アプリ詳細の取得に失敗しました');
         }
-
-        const appDetail = result.data;
-        const licenseIDs = appDetail.licenses?.map((lic: any) => lic.license_id)
-
+        const appDetail = result.data as AppData;
+        const licenseIDs = appDetail.licenses?.map((lic) => lic.license_id) || [];
         setFormData({
-          name: result.data.name || '',
-          version: result.data.version || '',
-          status: result.data.status || 'active',
-          description: result.data.description || '',
-          license_ids: licenseIDs, // 複数ライセンスをチェックボックスで扱う
+          name: appDetail.name || '',
+          version: appDetail.version || '',
+          status: appDetail.status || 'active',
+          description: appDetail.description || '',
+          license_ids: licenseIDs,
         });
       } catch (err: any) {
         setError(err.message || 'アプリ詳細取得でエラーが発生しました');
@@ -82,32 +69,23 @@ const AppEdit: React.FC = () => {
         setLoading(false);
       }
     };
-    fetchApp();
+
+    fetchAppData();
   }, [app_id]);
 
-  // 2) ライセンス一覧をGET (複数チェック用)
+  // 2) ライセンス一覧をGET
   useEffect(() => {
     const fetchLicenses = async () => {
       try {
-        const res = await fetch('https://85ef-163-44-52-101.ngrok-free.app/api/licenses', {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'ngrok-skip-browser-warning': 'true',
-          },
-        });
-        if (!res.ok) {
-          throw new Error(`ライセンス一覧取得エラー (ステータス: ${res.status})`);
-        }
-        const result = await res.json();
+        // ★ fetch → api.license.getAllLicenses に変更
+        const result = await api.license.getAllLicenses();
         if (result.success) {
-          // result.data はライセンスの配列
           setAllLicenses(result.data);
         } else {
           console.error('ライセンス一覧の取得に失敗:', result);
         }
       } catch (err: any) {
-        console.error('ライセンス一覧のfetchエラー:', err);
+        console.error('ライセンス一覧取得エラー:', err);
       }
     };
     fetchLicenses();
@@ -150,41 +128,21 @@ const AppEdit: React.FC = () => {
         throw new Error('app_id がありません');
       }
 
-      // 送信データ
-      console.log('送信データ:', formData);
-
-      const res = await fetch(`https://85ef-163-44-52-101.ngrok-free.app/api/apps/${app_id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'ngrok-skip-browser-warning': 'true',
-        },
-        body: JSON.stringify(formData),
-      });
-
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => null);
-        console.log('サーバーエラー内容:', errorData);
-        if (errorData && errorData.errors) {
-          setError('入力値が不正です。');
-          setErrorDetail(errorData.errors);
-        } else if (errorData && errorData.message) {
-          setError(errorData.message);
-          setErrorDetail(errorData);
-        } else {
-          setError(`アプリ更新に失敗しました (ステータス: ${res.status})`);
-        }
-        return;
-      }
-
-      const result = await res.json();
+      // ★ fetch → api.app.updateApp に変更
+      const result = await api.app.updateApp(app_id, formData);
       if (!result.success) {
-        throw new Error(result.message || 'アプリ更新に失敗しました');
+        // バリデーションエラー等、サーバーからのエラーメッセージ
+        if (result.errors) {
+          setErrorDetail(result.errors);
+          throw new Error(result.message || '入力値が不正です。');
+        } else {
+          throw new Error(result.message || 'アプリ更新に失敗しました');
+        }
       }
 
       setSuccess(true);
     } catch (err: any) {
-      setError(err.message || 'ライセンス更新時にエラーが発生しました');
+      setError(err.message || 'アプリ更新時にエラーが発生しました');
     } finally {
       setLoading(false);
     }
@@ -213,7 +171,7 @@ const AppEdit: React.FC = () => {
               type="text"
               value={formData.name}
               onChange={handleChange}
-              className="form1 w-full"
+              className="form1 w-full border-2"
               required
             />
           </div>
@@ -273,7 +231,6 @@ const AppEdit: React.FC = () => {
               ライセンスを選択 (複数可)<span className="beesight-red ">※</span>
             </label>
             {allLicenses.map((lic) => {
-              // チェック済みかどうか
               const checked = formData.license_ids.includes(lic.license_id);
               return (
                 <label key={lic.license_id} className="flex items-center gap-2 mb-1">

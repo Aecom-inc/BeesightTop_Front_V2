@@ -1,6 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import Footer from '../components/footer';
+import Pagination from '../components/Pagination';
+
+import {  PaginationData } from '../services/api';
+import api from '../services/api';
 
 // プロジェクトの詳細情報の型
 interface ProjectDetailData {
@@ -65,9 +69,18 @@ const ProjectDetail: React.FC = () => {
   const [authHistories, setAuthHistories] = useState<AuthHistory[]>([]);
   const [authError, setAuthError] = useState<string | null>(null);
 
+  // 端末一覧のページネーション
+  const [devicesPage, setDevicesPage] = useState<number>(1);
+  const [devicesPagination, setDevicesPagination] = useState<PaginationData | null>(null);
+
+  // 認証履歴のページネーション
+  const [authPage, setAuthPage] = useState<number>(1);
+  const [authPagination, setAuthPagination] = useState<PaginationData | null>(null);
+
   // 全体のローディング
   const [loading, setLoading] = useState<boolean>(true);
 
+  // プロジェクト詳細は1回だけ取得
   useEffect(() => {
     if (!project_id) {
       setProjectError('プロジェクトIDがありません');
@@ -75,80 +88,83 @@ const ProjectDetail: React.FC = () => {
       return;
     }
 
-    const fetchAllData = async () => {
+    const fetchProjectDetail = async () => {
       setLoading(true);
-
-      // 1. プロジェクト詳細
       try {
-        const resProject = await fetch(`https://85ef-163-44-52-101.ngrok-free.app/api/projects/${project_id}`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'ngrok-skip-browser-warning': 'true',
-          },
-        });
-        const resultProject = await resProject.json();
-
-        if (resultProject.success) {
-          setProject(resultProject.data);
+        const resultProject = await api.projects.getProjectById(project_id);
+        if (resultProject.success && resultProject.data) {
+          setProject({
+            project_id: resultProject.data.id,
+            name: resultProject.data.name,
+            api_key: resultProject.data.api_key,
+            status: resultProject.data.status,
+            activated_count: resultProject.data.activated_count,
+            terminal_limit: resultProject.data.terminal_limit,
+            open_at: resultProject.data.open_at,
+            close_at: resultProject.data.close_at,
+            description: resultProject.data.description,
+          });
         } else {
-          setProjectError('プロジェクト情報の取得に失敗しました');
+          setProjectError(resultProject.message || 'プロジェクト情報の取得に失敗しました');
         }
-      } catch (err) {
+      } catch (err: any) {
         setProjectError('プロジェクト情報の取得中にエラーが発生しました');
       }
-
-      // 2. 端末一覧
-      try {
-        const resDevices = await fetch(
-          `https://85ef-163-44-52-101.ngrok-free.app/api/projects/${project_id}/terminals`,
-          {
-            method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-              'ngrok-skip-browser-warning': 'true',
-            },
-          },
-        );
-        const resultDevices = await resDevices.json();
-
-        if (resultDevices.success) {
-          setDevices(resultDevices.data);
-        } else {
-          setDevicesError('端末一覧の取得に失敗しました');
-        }
-      } catch (err) {
-        setDevicesError('端末一覧の取得中にエラーが発生しました');
-      }
-
-      // 3. 認証履歴
-      try {
-        const resHistories = await fetch(
-          `https://85ef-163-44-52-101.ngrok-free.app/api/projects/${project_id}/auth/histories`,
-          {
-            method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-              'ngrok-skip-browser-warning': 'true',
-            },
-          },
-        );
-        const resultHistories = await resHistories.json();
-
-        if (resultHistories.success) {
-          setAuthHistories(resultHistories.data);
-        } else {
-          setAuthError('認証履歴の取得に失敗しました');
-        }
-      } catch (err) {
-        setAuthError('認証履歴の取得中にエラーが発生しました');
-      }
-
       setLoading(false);
     };
 
-    fetchAllData();
+    fetchProjectDetail();
   }, [project_id]);
+
+  // 2) 端末一覧 (devicesPage が変わるたびに再取得)
+  useEffect(() => {
+    if (!project_id) return;
+
+    const fetchDevices = async () => {
+      try {
+        const resultDevices = await api.projects.getTerminalsByProjectId(project_id, devicesPage);
+        if (resultDevices.success && resultDevices.data) {
+          setDevices(resultDevices.data);
+          if (resultDevices.pagination) {
+            setDevicesPagination(resultDevices.pagination);
+          } else {
+            setDevicesPagination(null);
+          }
+        } else {
+          setDevicesError(resultDevices.message || '端末一覧の取得に失敗しました');
+        }
+      } catch (err: any) {
+        setDevicesError('端末一覧の取得中にエラーが発生しました');
+      }
+    };
+
+    fetchDevices();
+  }, [project_id, devicesPage]);
+
+  // 3) 認証履歴 (authPage が変わるたびに再取得)
+  useEffect(() => {
+    if (!project_id) return;
+
+    const fetchHistories = async () => {
+      try {
+        const resultHistories = await api.projects.getAuthHistoriesByProjectId(project_id, authPage);
+        if (resultHistories.success && resultHistories.data) {
+          setAuthHistories(resultHistories.data);
+          if (resultHistories.pagination) {
+            setAuthPagination(resultHistories.pagination);
+          } else {
+            setAuthPagination(null);
+          }
+        } else {
+          setAuthError(resultHistories.message || '認証履歴の取得に失敗しました');
+        }
+      } catch (err: any) {
+        setAuthError('認証履歴の取得中にエラーが発生しました');
+      }
+    };
+
+    fetchHistories();
+  }, [project_id, authPage]);
 
   if (loading) return <p>データを取得中...</p>;
 
@@ -158,7 +174,7 @@ const ProjectDetail: React.FC = () => {
 
       {/* プロジェクト詳細 */}
       {project ? (
-        <div className="bg-white p-6 rounded-lg shadow mb-8">
+        <div className="bg-white p-6 rounded-lg mb-8">
           <h2 className="text-xl font-bold">{project.name}</h2>
           {projectError && <p className="text-red-500">{projectError}</p>}
           <p className="text-gray-600">API Key: {project.api_key}</p>
@@ -207,6 +223,7 @@ const ProjectDetail: React.FC = () => {
       ) : (
         <p className="text-gray-500 mb-6">端末がありません</p>
       )}
+      {devicesPagination && <Pagination pagination={devicesPagination} onPageChange={(page) => setDevicesPage(page)} />}
 
       {/* 認証履歴 */}
       <h2 className="title2 mb-2 mt-5">認証履歴</h2>
@@ -245,9 +262,11 @@ const ProjectDetail: React.FC = () => {
       ) : (
         <p className="text-gray-500">認証履歴がありません</p>
       )}
+      {authPagination && <Pagination pagination={authPagination} onPageChange={(page) => setAuthPage(page)} />}
 
       <Footer />
     </div>
   );
 };
+
 export default ProjectDetail;

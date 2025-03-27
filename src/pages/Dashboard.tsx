@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import Footer from '../components/footer';
 import { ArrowRight, Plus, Search } from 'lucide-react';
+import api from '../services/api';
 
 // 「最新の承認」用の型
 interface HistoryData {
@@ -37,20 +38,10 @@ const Dashboard: React.FC = () => {
     const fetchHistories = async () => {
       try {
         setLoadingHistory(true);
-        const response = await fetch('https://85ef-163-44-52-101.ngrok-free.app/api/auth/histories?limit=5', {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'ngrok-skip-browser-warning': 'true',
-          },
-        });
-
-        if (!response.ok) {
-          throw new Error(`HTTPエラー: ${response.status}`);
-        }
-        const result = await response.json();
+        // ★ api.histories.getHistories(5) を呼ぶだけでOK
+        const result = await api.histories.getHistories(5);
+        // 例: result が { success:true, data: [...], ... } だと想定
         if (result.success) {
-          // 上位5件 or limit=5
           setHistories(result.data.slice(0, 5));
         } else {
           setErrorHistory('データの取得に失敗しました');
@@ -75,7 +66,7 @@ const Dashboard: React.FC = () => {
       setLoadingSearch(true);
       setErrorSearch(null);
 
-      const url = `https://85ef-163-44-52-101.ngrok-free.app/api/projects?search=${encodeURIComponent(searchTerm)}&limit=5`;
+      const url = `https://7fc0-163-44-52-101.ngrok-free.app/api/projects?search=${encodeURIComponent(searchTerm)}&limit=5`;
       const response = await fetch(url, {
         method: 'GET',
         headers: {

@@ -53,19 +53,19 @@ const Sidebar: React.FC = () => {
             </Link>
           </li>
           <li>
-            <Link to="/users">
-              <span>
-                <UsersIcon size={24} />
-              </span>
-              <p>ユーザー一覧</p>
-            </Link>
-          </li>
-          <li>
             <Link to="/apps">
               <span>
                 <Apple size={24} />
               </span>
               <p>アプリ一覧</p>
+            </Link>
+          </li>
+          <li>
+            <Link to="/users">
+              <span>
+                <UsersIcon size={24} />
+              </span>
+              <p>ユーザー一覧</p>
             </Link>
           </li>
         </ul>

@@ -5,50 +5,15 @@ import SearchBar from '../components/searchBar';
 import { PackagePlus } from 'lucide-react';
 import Pagination from '../components/Pagination';
 
-interface Project {
-  project_id: number;
-  name: string;
-  api_key: string;
-  status: string;
-  activated_count: number;
-  terminal_limit: number;
-  open_at: string;
-  close_at: string;
-  description: string;
-}
-
- // ページネーション
-interface PaginationLink {
-  url: string | null;
-  label: string;
-  active: boolean;
-}
-
-interface Pagination {
-  total: number;
-  per_page: number;
-  current_page: number;
-  last_page: number;
-  next_page_url: string | null;
-  prev_page_url: string | null;
-  from: number;
-  to: number;
-  links: PaginationLink[];
-}
-
-interface ProjectResponse {
-  success: boolean;
-  message: string;
-  data: Project[];
-  pagination: Pagination;
-}
+import { Project, PaginationData } from '../services/api';
+import api from '../services/api';
 
 const ProjectList: React.FC = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [filtered, setFiltered] = useState<Project[]>([]);
 
   // ページネーション
-  const [pagination, setPagination] = useState<Pagination | null>(null);
+  const [pagination, setPagination] = useState<PaginationData | null>(null);
   const [currentPage, setCurrentPage] = useState<number>(1);
 
   const [loading, setLoading] = useState<boolean>(true);
@@ -56,28 +21,23 @@ const ProjectList: React.FC = () => {
 
   const navigate = useNavigate();
 
-  // ① APIリクエスト
+  // プロジェクト一覧API呼び出し
   const fetchProjects = async (page: number) => {
     setLoading(true);
     setError(null);
+
     try {
-      const response = await fetch(`https://85ef-163-44-52-101.ngrok-free.app/api/projects?page=${page}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'ngrok-skip-browser-warning': 'true',
-        },
-      });
-      if (!response.ok) {
-        throw new Error(`HTTPエラー: ${response.status}`);
-      }
-      const result: ProjectResponse = await response.json();
+      const result = await api.projects.getProjects(page);
       console.log('ProjectList API result:', result);
 
       if (result.success) {
         setProjects(result.data);
-        setFiltered(result.data); // 初期状態: 全件表示 or フィルタリング用
-        setPagination(result.pagination);
+        setFiltered(result.data);
+        if (result.pagination) {
+          setPagination(result.pagination);
+        } else {
+          setPagination(null);
+        }
       } else {
         setError('データの取得に失敗しました');
       }
@@ -88,7 +48,7 @@ const ProjectList: React.FC = () => {
     }
   };
 
-  // ② 検索ハンドラ (フロント側検索)
+  // フロント側検索
   const handleSearch = (query: string) => {
     if (!query) {
       setFiltered(projects);
@@ -99,24 +59,11 @@ const ProjectList: React.FC = () => {
     setFiltered(filteredList);
   };
 
-  // ③ 削除ハンドラ
+  // 削除ハンドラ
   const handleDelete = async (projectId: number) => {
     if (!window.confirm('本当に削除しますか？')) return;
     try {
-      const res = await fetch(`https://85ef-163-44-52-101.ngrok-free.app/api/projects/${projectId}`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          'ngrok-skip-browser-warning': 'true',
-        },
-      });
-      if (!res.ok) {
-        const text = await res.text();
-        console.log('エラー時レスポンス:', text);
-        throw new Error(`プロジェクト削除失敗 (ステータス: ${res.status})`);
-      }
-      const result = await res.json();
-      console.log('削除結果:', result);
+      const result = await api.projects.deleteProject(projectId);
 
       if (!result.success) {
         throw new Error(result.message || 'プロジェクト削除に失敗しました');
@@ -131,12 +78,12 @@ const ProjectList: React.FC = () => {
     }
   };
 
-  // 初回 & currentPage が変わるたびに fetch
+  // マウント時 & currentPage 変化時にプロジェクト一覧取得
   useEffect(() => {
     fetchProjects(currentPage);
   }, [currentPage]);
 
-  // ページ切り替えコールバック
+  // ページ切り替え
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
   };
@@ -166,11 +113,11 @@ const ProjectList: React.FC = () => {
                 プロジェクト名
               </th>
               <th className="w-1/8">
-                認証回数 / <br />
+                認証回数 /<br />
                 可能数
               </th>
               <th className="w-1/6">
-                利用開始 / <br />
+                利用開始 /<br />
                 終了日
               </th>
               <th className="w-1/6">API Key</th>
@@ -184,7 +131,7 @@ const ProjectList: React.FC = () => {
                 <td>
                   <span
                     className={`px-3 py-1 rounded-full text-center ${
-                      project.status === 'activate'
+                      project.status === 'active'
                         ? 'bg-blue-100'
                         : project.status === 'inactive'
                           ? 'bg-red-100'
@@ -227,7 +174,7 @@ const ProjectList: React.FC = () => {
         </table>
       </div>
 
-      {/* ⑤ ページネーション */}
+      {/* ページネーション */}
       {pagination && <Pagination pagination={pagination} onPageChange={handlePageChange} />}
 
       <Footer />

@@ -3,50 +3,37 @@ import { useForm, SubmitHandler } from 'react-hook-form';
 import { Link } from 'react-router-dom';
 import Footer from '../components/footer';
 
-// POST 先: https://85ef-163-44-52-101.ngrok-free.app/api/projects
+// ★ 追加
+import api from '../services/api';
 
-/**
- * サーバーが受け取るパラメータ
- * "project_name": string,
- * "customer_code": string,
- * "api_key": string,
- * "password": string,
- * "terminal_limit": number,
- * "open_at": string, // "YYYY-MM-DD"
- * "close_at": string, // "YYYY-MM-DD"
- * "status": "activate"|"inactive"|"closed" etc?
- * "type": string,
- * "prefix": string,
- * "description": string
- */
-
+// POST 先: /api/projects
 interface ProjectParams {
   name: string;
   customer_code: string;
   api_key: string;
   password: string;
   terminal_limit: number;
-  open_at: string; // 2025-01-01
+  open_at: string;
   close_at: string;
-  status: string; // e.g., "activate", "inactive", "closed"
+  status: string;
   type: string;
   prefix: string;
   description: string;
 }
 
-// react-hook-form 用
+// react-hook-form 用 (フォーム入力項目)
 type ProjectForm = {
-  name: string; // プロジェクト名 (入力)
-  customer: string; // 顧客コード (入力)
-  apikey: string; // APIキー (入力)
-  pw: string; // 開発モードPW
+  name: string; // プロジェクト名
+  customer: string; // 顧客コード
+  apikey: string; // APIキー
+  pw: string; // PW
   limit: number; // 端末上限
-  start: string; // プロジェクト開始日
-  end: string; // プロジェクト終了日
-  status: string; // ステータス (radio)
-  appType: string; // アプリ区分
+  start: string; // 開始日
+  end: string; // 終了日
+  status: string; // ラジオの選択
+  appType: string; // セレクトボックス
   prefix: string; // 端末プレフィックス
-  note: string; // 補足情報
+  note: string; // 備考
 };
 
 const ProjectRegister: React.FC = () => {
@@ -67,58 +54,42 @@ const ProjectRegister: React.FC = () => {
       limit: 3,
       start: '2025-01-01',
       end: '2025-12-31',
-      status: 'activate',
-      appType: 'salses',
+      status: 'active',
+      appType: '1', // "1"="sales" としている例
       prefix: '',
       note: '',
     },
   });
 
-  const onSubmit: SubmitHandler<ProjectForm> = async (data) => {
-  // console.log('入力したフォームデータ:', data);
+  // ★ 1) onSubmit
+  const onSubmit: SubmitHandler<ProjectForm> = async (formData) => {
     setLoading(true);
     setError(null);
     setSuccess(false);
 
-    // POST用payload
+    // 送信ペイロードをサーバー仕様に合わせる
     const payload: ProjectParams = {
-      name: data.name,
-      customer_code: data.customer,
-      api_key: data.apikey,
-      password: data.pw,
-      terminal_limit: data.limit,
-      open_at: data.start,
-      close_at: data.end,
-      status: data.status,
-      type: data.appType,
-      prefix: data.prefix,
-      description: data.note,
+      name: formData.name,
+      customer_code: formData.customer,
+      api_key: formData.apikey,
+      password: formData.pw,
+      terminal_limit: formData.limit,
+      open_at: formData.start,
+      close_at: formData.end,
+      status: formData.status,
+      type: formData.appType,
+      prefix: formData.prefix,
+      description: formData.note,
     };
-    // console.log('送信するpayload:', payload);
 
     try {
-      const response = await fetch('https://85ef-163-44-52-101.ngrok-free.app/api/projects', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'ngrok-skip-browser-warning': 'true',
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
-        console.log('Validation error data:', errorData);
-        throw new Error(`プロジェクト登録に失敗しました (ステータス: ${response.status})`);
-      }
-
-      const result = await response.json();
+      // ★ fetch → api.projects.createProject に変更
+      const result = await api.projects.createProject(payload);
       console.log('登録結果:', result);
 
       if (!result.success) {
         throw new Error(result.message || 'プロジェクト登録に失敗しました');
       }
-
       setSuccess(true);
     } catch (err: any) {
       console.error(err);
@@ -175,7 +146,7 @@ const ProjectRegister: React.FC = () => {
             {errors.apikey && <p className="error-red">{errors.apikey.message}</p>}
           </div>
 
-          {/* 認証モードPW */}
+          {/* 開発モードPW */}
           <div>
             <label className="lavel-text">
               開発モードPW<span className="beesight-red ">※</span>
@@ -229,11 +200,11 @@ const ProjectRegister: React.FC = () => {
             </label>
             <div className="flex gap-4">
               <label className="flex items-center">
-                <input type="radio" value="activate" {...register('status')} className="mr-2" />
-                activate
+                <input type="radio" value="active" {...register('status')} className="mr-2" />
+                active
               </label>
               <label className="flex items-center">
-                <input type="radio" value="inactive" {...register('status')} className="mr-2" />
+                <input type="radio" value="inactive  " {...register('status')} className="mr-2" />
                 inactive
               </label>
               <label className="flex items-center">
@@ -249,7 +220,7 @@ const ProjectRegister: React.FC = () => {
               アプリ区分<span className="beesight-red ">※</span>
             </label>
             <select {...register('appType', { required: 'アプリ区分は必須です' })} className="form1 w-1/3">
-              <option value="1">salses</option>
+              <option value="1">sales</option>
               <option value="2">rent</option>
               <option value="3">demo</option>
               <option value="4">development</option>
@@ -276,7 +247,6 @@ const ProjectRegister: React.FC = () => {
             <textarea {...register('note')} className="form1 w-full" placeholder="備考やメモ" />
           </div>
 
-          {/* ボタン */}
           {success && <p className="text-green-500">プロジェクトが登録されました！</p>}
           <div className="flex justify-center gap-4">
             <button type="reset" className="delete_b2">
@@ -293,7 +263,6 @@ const ProjectRegister: React.FC = () => {
           </div>
         </form>
       </div>
-      {/* フッター */}
       <Footer />
     </div>
   );

@@ -1,13 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { UserPlusIcon} from 'lucide-react';
+import { UserPlusIcon } from 'lucide-react';
 
-// ユーザー情報の型
-interface User {
-  user_id: string;
-  name: string;
-  email: string;
-}
+import api, { User } from '../services/api';
 
 const UserList: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
@@ -17,19 +12,11 @@ const UserList: React.FC = () => {
 
   useEffect(() => {
     const fetchUsers = async () => {
+      setLoading(true);
+      setError(null);
       try {
-        const response = await fetch('https://85ef-163-44-52-101.ngrok-free.app/api/users', {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'ngrok-skip-browser-warning': 'true',
-          },
-        });
-        if (!response.ok) {
-          throw new Error(`ユーザー一覧の取得に失敗しました (ステータス: ${response.status})`);
-        }
-        const result = await response.json();
-        setUsers(result.data);
+        const data = await api.users.getAllUsers();
+        setUsers(data);
       } catch (err: any) {
         setError(err.message || 'ユーザー一覧の取得中にエラーが発生しました');
       } finally {
@@ -43,7 +30,8 @@ const UserList: React.FC = () => {
   return (
     <div>
       <h1 className="title1">ユーザー一覧</h1>
-      <p className="mb-5">新規登録、編集動きません。</p>
+      <p className="mb-5">新規登録、編集ダミーです動きません。</p>
+
       <Link to="/users/new" className="button1 mb-5 w-80">
         <UserPlusIcon size={24} />
         <p>ユーザー登録</p>
@@ -52,6 +40,7 @@ const UserList: React.FC = () => {
       {loading && <p className="text-gray-500">読み込み中...</p>}
       {error && <p className="text-red-500">{error}</p>}
 
+      {/* ユーザー一覧テーブル */}
       {!loading && !error && users.length > 0 && (
         <table className="text-sm tablepadding1 tableborder1">
           <thead>
@@ -64,12 +53,15 @@ const UserList: React.FC = () => {
           </thead>
           <tbody>
             {users.map((user) => (
-              <tr key={user.user_id} className=" hover:bg-gray-50">
+              <tr key={user.user_id} className="hover:bg-gray-50">
                 <td>{user.name}</td>
                 <td>{user.user_id}</td>
                 <td>{user.email}</td>
                 <td className="text-center">
-                  <button className="edit_b" onClick={() => navigate(`/licenses/edit/${user.user_id}`)}>
+                  <button
+                    className="edit_b"
+                    onClick={() => navigate(`/users/edit/${user.user_id}`)}
+                  >
                     修正
                   </button>
                 </td>

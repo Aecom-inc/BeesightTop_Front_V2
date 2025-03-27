@@ -2,15 +2,18 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import Footer from '../components/footer';
 
+// ★ 追加
+import api from '../services/api';
+
 interface Supplier {
   suppliers_id: number | null;
   suppliers_name: string;
 }
 
-interface License {
+interface LicenseData {
   license_id: number;
   name: string;
-  license_key: string;
+  license_key: string; // or array
   used: number;
   limit: number;
   expire_at: string;
@@ -18,7 +21,6 @@ interface License {
   supplier: Supplier;
 }
 
-// フォームで入力・編集する型
 interface KeyValue {
   key: string;
   value: string;
@@ -27,7 +29,7 @@ interface FormData {
   name: string;
   supplier_id: string;
   limit: number;
-  used:number;
+  used: number;
   expire_at: string;
   description: string;
   keyValues: KeyValue[];
@@ -43,10 +45,8 @@ const LicenseEdit: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
-
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
 
-  // フォーム用ステート
   const [formData, setFormData] = useState<FormData>({
     name: '',
     supplier_id: '',
@@ -57,7 +57,7 @@ const LicenseEdit: React.FC = () => {
     keyValues: [],
   });
 
-  // 1. マウント時にライセンス詳細を取得
+  // 1) マウント時にライセンス詳細を取得
   useEffect(() => {
     const fetchLicense = async () => {
       if (!license_id) {
@@ -66,24 +66,14 @@ const LicenseEdit: React.FC = () => {
         return;
       }
       try {
-        const res = await fetch(`https://85ef-163-44-52-101.ngrok-free.app/api/licenses/${license_id}`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'ngrok-skip-browser-warning': 'true',
-          },
-        });
-        if (!res.ok) {
-          throw new Error(`ライセンス取得失敗 (ステータス: ${res.status})`);
-        }
-        const result = await res.json();
+        // ★ fetch → api.license.getLicenseById
+        const result = await api.license.getLicenseById(license_id);
         if (!result.success) {
           throw new Error(result.message || 'ライセンス取得に失敗しました');
         }
 
-        const lic: License = result.data;
+        const lic: LicenseData = result.data;
         console.log('ライセンス詳細:', lic);
-        console.log('lic.expire_at:', lic.expire_at);
         // ライセンスキーをパース → KeyValue[] に変換
         let parsed: KeyValue[] = [];
 
@@ -93,8 +83,8 @@ const LicenseEdit: React.FC = () => {
           // すでに [{ key:'...', value:'...' }, ...] 形式
           parsed = lk as KeyValue[];
         } else if (typeof lk === 'string') {
-          // JSON文字列としてパースが必要な場合
           try {
+            // JSON文字列をパースするなら
             const json = JSON.parse(lk);
             if (Array.isArray(json)) {
               parsed = json as KeyValue[];
@@ -109,13 +99,12 @@ const LicenseEdit: React.FC = () => {
           }
         }
 
-        // フォームに反映
         setFormData({
           name: lic.name,
           supplier_id: lic.supplier?.suppliers_id ? String(lic.supplier.suppliers_id) : '',
           limit: lic.limit,
           used: lic.used,
-          expire_at: lic.expire_at ? lic.expire_at.substring(0, 10) : '', // '2025-08-19' 部分を抽出
+          expire_at: lic.expire_at ? lic.expire_at.substring(0, 10) : '',
           description: lic.description || '',
           keyValues: parsed,
         });
@@ -129,13 +118,13 @@ const LicenseEdit: React.FC = () => {
     fetchLicense();
   }, [license_id]);
 
-  // 2. フォーム入力ハンドラ
+  // 2) フォーム入力ハンドラ
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  // 3. keyValue ペアの変更ハンドラ
+  // 3) keyValue ペアの変更
   const handleKeyValueChange = (index: number, field: 'key' | 'value', newVal: string) => {
     setFormData((prev) => {
       const newArr = [...prev.keyValues];
@@ -144,7 +133,7 @@ const LicenseEdit: React.FC = () => {
     });
   };
 
-  // 4. +ボタンでキー&バリュー追加
+  // 4) +ボタンで追加
   const addKeyValuePair = () => {
     setFormData((prev) => ({
       ...prev,
@@ -152,7 +141,7 @@ const LicenseEdit: React.FC = () => {
     }));
   };
 
-  // 5. 削除ボタンでキー&バリュー削除
+  // 5) 削除ボタンで削除
   const removeKeyValuePair = (index: number) => {
     setFormData((prev) => {
       const newArr = [...prev.keyValues];
@@ -161,7 +150,7 @@ const LicenseEdit: React.FC = () => {
     });
   };
 
-  // 6. 送信 (PUT)
+  // 6) 送信 (PUT)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!license_id) return;
@@ -172,14 +161,8 @@ const LicenseEdit: React.FC = () => {
     setValidationErrors({});
 
     try {
-      // keyValues を JSON.stringify で { k:v, k2:v2 } の形に組み立てる
-      // 例: [{"key":"AAA","value":"BBB"}] → { AAA:'BBB' } に組み直して JSON化
-      const obj: Record<string, any> = {};
-      formData.keyValues.forEach((pair) => {
-        if (pair.key) obj[pair.key] = pair.value;
-      });
-      // const licenseKeyJson = JSON.stringify(obj); // => "{\"AAA\":\"BBB\"}"
-
+      // keyValues をそのまま送るか、JSON化するかはサーバー仕様による
+      // ここでは "license_key: formData.keyValues" の形で送信している
       const payload = {
         name: formData.name,
         supplier_id: Number(formData.supplier_id),
@@ -191,25 +174,10 @@ const LicenseEdit: React.FC = () => {
       };
       console.log('PUT送信payload:', payload);
 
-      const res = await fetch(`https://85ef-163-44-52-101.ngrok-free.app/api/licenses/${license_id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'ngrok-skip-browser-warning': 'true',
-        },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => null);
-        console.error('サーバーエラー:', data);
-        if (data && data.errors) {
-          setValidationErrors(data.errors);
-        }
+      // ★ fetch → api.license.updateLicense
+      const result = await api.license.updateLicense(license_id, payload);
+      console.log('更新結果:', result);
 
-        throw new Error(data?.message || 'ライセンス更新に失敗しました');
-      }
-
-      const result = await res.json();
       if (!result.success) {
         if (result.errors) {
           setValidationErrors(result.errors);
@@ -217,7 +185,6 @@ const LicenseEdit: React.FC = () => {
         throw new Error(result.message || 'ライセンス更新に失敗しました');
       }
       setSuccess(true);
-      // alert('ライセンスを更新しました');
     } catch (err: any) {
       console.error(err);
       setError(err.message);
@@ -226,18 +193,17 @@ const LicenseEdit: React.FC = () => {
     }
   };
 
-  // if (loading) return <p>読み込み中...</p>;
+  if (loading) return <p>読み込み中...</p>;
+  // エラー時
   // if (error) return <p className="text-red-500">{error}</p>;
+  // ↑ もしコンポーネント全体を中断したいなら上記のようにするが、
+  //   下記のようにフォーム上にエラーを出し続けたいなら中断しなくてもOK。
 
   return (
     <div>
       <h1 className="title1">ライセンス編集</h1>
 
-      {loading && <p>送信中...</p>}
-      {/* グローバルな error (message) */}
       {error && <p className="beesight-red">{error}</p>}
-
-      {/* フィールド単位のエラーメッセージをまとめて表示 */}
       {Object.keys(validationErrors).length > 0 && (
         <div className="beesight-red mb-4">
           <ul>
@@ -263,7 +229,7 @@ const LicenseEdit: React.FC = () => {
           {/* supplier_id */}
           <div>
             <label className="lavel-text">
-              supplier_id（ライセンス発行企業ID）<span className="beesight-red ">※</span>
+              supplier_id (ライセンス発行企業ID)<span className="beesight-red ">※</span>
             </label>
             <input
               name="supplier_id"
@@ -313,7 +279,7 @@ const LicenseEdit: React.FC = () => {
             />
           </div>
 
-          {/* 複数の key/value を設定するフォーム */}
+          {/* 複数の key/value 入力 */}
           <div>
             <label className="lavel-text">
               ライセンスキー (複数ペア)<span className="beesight-red ">※</span>
@@ -341,7 +307,7 @@ const LicenseEdit: React.FC = () => {
                 </button>
               </div>
             ))}
-            {/* +ボタン */}
+            {/* 追加ボタン */}
             <button
               type="button"
               onClick={addKeyValuePair}
@@ -352,6 +318,7 @@ const LicenseEdit: React.FC = () => {
           </div>
 
           {success && <p className="text-green-500">更新が完了しました！</p>}
+
           <div className="flex justify-center">
             <button type="submit" className="edit_b2">
               更新

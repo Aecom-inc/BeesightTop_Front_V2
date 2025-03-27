@@ -2,13 +2,13 @@ import React, { useState } from 'react';
 import Footer from '../components/footer';
 import { Link } from 'react-router-dom';
 
-// キー＆バリューの型
+import api from '../services/api';
+
 interface KeyValue {
   key: string;
   value: string;
 }
 
-// フォーム用の型
 interface LicenseFormData {
   name: string;
   supplier_id: string;
@@ -62,50 +62,34 @@ const LicenseNew: React.FC = () => {
         used: Number(formData.used),
         expire_at: formData.expire_at,
         description: formData.description,
-        license_key: formData.keyValues,
+        license_key: formData.keyValues, // ← 複数ペアをそのまま送信
       };
       console.log('新規登録 payload:', payload);
 
-      const res = await fetch('https://85ef-163-44-52-101.ngrok-free.app/api/licenses', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'ngrok-skip-browser-warning': 'true',
-        },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => null);
+      const result = await api.license.createLicense(payload);
+      console.log('レスポンス:', result);
 
-        if (data && data.errors) {
-          // API が { errors: {フィールド名: [メッセージ1, メッセージ2...]}, message: "..." } などで返してくる
-          setValidationErrors(data.errors);
-        }
-        setError(data?.message || 'ライセンス新規作成に失敗しました');
-        setLoading(false);
-        return;
-      }
-      const result = await res.json();
       if (!result.success) {
+        if (result.errors) {
+          setValidationErrors(result.errors);
+        }
         throw new Error(result.message || 'ライセンス新規作成に失敗しました');
       }
 
+      // success の場合
       setSuccess(true);
-      // フォームリセット
-      setFormData({
-        name: '',
-        supplier_id: '',
-        limit: 0,
-        used: 0,
-        expire_at: '',
-        description: '',
-        keyValues: [],
-      });
-    } catch (err: any) {
-      console.error(err);
-      setError(err.message);
-    } finally {
-      setLoading(false);
+    } catch (error: any) {
+      if (error.response) {
+        console.error('サーバーが返したエラーdata:', error.response.data);
+
+        // バリデーションエラーがあれば取り出して setValidationErrors
+        if (error.response.data?.errors) {
+          setValidationErrors(error.response.data.errors);
+        }
+      } else {
+        console.error('その他エラー:', error);
+      }
+      setError(error.message);
     }
   };
 
@@ -114,6 +98,8 @@ const LicenseNew: React.FC = () => {
       <h1 className="title1">ライセンス 新規登録</h1>
       {loading && <p>送信中...</p>}
       {error && <p className="beesight-red">{error}</p>}
+
+      {/* フィールドごとのバリデーションエラー表示 */}
       {Object.keys(validationErrors).length > 0 && (
         <div className="beesight-red">
           <ul>
@@ -137,7 +123,8 @@ const LicenseNew: React.FC = () => {
 
           <div>
             <label className="lavel-text">
-              supplier_id（ライセンス発行企業ID）<span className="beesight-red ">※</span>
+              supplier_id（ライセンス発行企業ID）
+              <span className="beesight-red ">※</span>
             </label>
             <input
               name="supplier_id"
@@ -186,7 +173,8 @@ const LicenseNew: React.FC = () => {
           {/* ライセンスキー (複数ペア) */}
           <div>
             <label className="lavel-text">
-              ライセンスキー (複数ペア)<span className="beesight-red ">※</span>
+              ライセンスキー (複数ペア)
+              <span className="beesight-red ">※</span>
             </label>
             {formData.keyValues.map((kv, index) => (
               <div key={index} className="flex gap-2 mb-2">
@@ -238,6 +226,7 @@ const LicenseNew: React.FC = () => {
           </div>
 
           {success && <p className="text-green-500">登録が完了しました！</p>}
+
           <div className="flex justify-center">
             <button type="submit" className="edit_b2" disabled={loading}>
               登録

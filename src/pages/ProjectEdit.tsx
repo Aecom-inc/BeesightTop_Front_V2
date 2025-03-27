@@ -3,39 +3,10 @@ import { useParams, Link } from 'react-router-dom';
 import Footer from '../components/footer';
 import { useForm, SubmitHandler } from 'react-hook-form';
 
-// サーバーに送るデータ形 (名前やキーはサーバー仕様に合わせる)
-interface ProjectPayload {
-  name: string;
-  customer_code: string;
-  api_key: string;
-  password: string;
-  terminal_limit: number;
-  open_at: string; // YYYY-MM-DD
-  close_at: string; // YYYY-MM-DD
-  status: string;
-  type: string | number;
-  prefix: string;
-  description: string;
-}
-
-// サーバーからGETした詳細データ
-interface ProjectData {
-  id: number;
-  name: string;
-  customer_code: string;
-  api_key: string;
-  password: string;
-  terminal_limit: number;
-  open_at: string;
-  close_at: string;
-  status: string;
-  type: string | number;
-  prefix: string;
-  description: string;
-}
+// ★ 追加
+import api from '../services/api';
 
 // react-hook-form 用の型
-// ※ フィールド名は"好きに"決めてもOK, 送信時にサーバー仕様に合わせて再構成する
 type ProjectForm = {
   name: string;
   customer_code: string;
@@ -45,15 +16,29 @@ type ProjectForm = {
   open_at: string;
   close_at: string;
   status: string;
-  type: string; // selectで文字列にする
+  type: string;
   prefix: string;
   description: string;
 };
 
+// サーバーに送るデータ形 (本来サーバー仕様に合わせる)
+interface ProjectPayload {
+  name: string;
+  customer_code: string;
+  api_key: string;
+  password: string;
+  terminal_limit: number;
+  open_at: string;
+  close_at: string;
+  status: string;
+  type: string | number;
+  prefix: string;
+  description: string;
+}
+
 function ProjectEdit() {
   const { project_id } = useParams<{ project_id: string }>();
 
-  // ロード状態やエラー表示
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -62,7 +47,7 @@ function ProjectEdit() {
   const {
     register,
     handleSubmit,
-    reset, // 取得データを反映するために使う
+    reset,
     formState: { errors },
   } = useForm<ProjectForm>({
     defaultValues: {
@@ -73,14 +58,14 @@ function ProjectEdit() {
       terminal_limit: 0,
       open_at: '',
       close_at: '',
-      status: 'active', // 初期値
-      type: '1', // 初期値
+      status: 'active',
+      type: '1',
       prefix: '',
       description: '',
     },
   });
 
-  // 1) 初期ロードでプロジェクト詳細を取得 → react-hook-form の `reset()` でフォーム初期化
+  // ① GET /projects/:id → データ取得
   useEffect(() => {
     const fetchProject = async () => {
       if (!project_id) {
@@ -89,22 +74,13 @@ function ProjectEdit() {
         return;
       }
       try {
-        const res = await fetch(`https://85ef-163-44-52-101.ngrok-free.app/api/projects/${project_id}`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'ngrok-skip-browser-warning': 'true',
-          },
-        });
-        if (!res.ok) {
-          throw new Error(`プロジェクト詳細取得失敗 (ステータス: ${res.status})`);
-        }
-        const result = await res.json();
+        // ★ fetch → api.projects.getProjectById
+        const result = await api.projects.getProjectById(project_id);
         if (!result.success || !result.data) {
           throw new Error(result.message || 'プロジェクト詳細の取得に失敗しました');
         }
 
-        const p: ProjectData = result.data;
+        const p = result.data;
         // 取得したデータを react-hook-form に反映
         reset({
           name: p.name || '',
@@ -112,11 +88,11 @@ function ProjectEdit() {
           api_key: p.api_key || '',
           password: p.password || '',
           terminal_limit: p.terminal_limit || 0,
-          // 日付文字列 '2025-01-21 15:00:00' -> '2025-01-21'
+          // 'YYYY-MM-DD HH:mm:ss' → 'YYYY-MM-DD'
           open_at: p.open_at?.split(' ')[0] || '',
           close_at: p.close_at?.split(' ')[0] || '',
           status: p.status || 'active',
-          type: String(p.type ?? '1'), // e.g. 1 -> '1'
+          type: String(p.type ?? '1'),
           prefix: p.prefix || '',
           description: p.description || '',
         });
@@ -129,7 +105,7 @@ function ProjectEdit() {
     fetchProject();
   }, [project_id, reset]);
 
-  // 2) フォーム送信 (PUT)
+  // ② PUT /projects/:id → 更新
   const onSubmit: SubmitHandler<ProjectForm> = async (data) => {
     setLoading(true);
     setError(null);
@@ -139,7 +115,7 @@ function ProjectEdit() {
       if (!project_id) {
         throw new Error('project_id がありません');
       }
-      // サーバーに合わせて再構成 (key名など)
+      // サーバー仕様に合わせて再構成
       const payload: ProjectPayload = {
         name: data.name,
         customer_code: data.customer_code,
@@ -149,32 +125,19 @@ function ProjectEdit() {
         open_at: data.open_at,
         close_at: data.close_at,
         status: data.status,
-        type: data.type, // 文字列 or number: APIに合わせる
+        type: data.type, // 文字列か数値かはサーバー側の定義に合わせる
         prefix: data.prefix,
         description: data.description,
       };
       console.log('PUT送信payload:', payload);
 
-      const res = await fetch(`https://85ef-163-44-52-101.ngrok-free.app/api/projects/${project_id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'ngrok-skip-browser-warning': 'true',
-        },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => null);
-        console.log('Validation error data:', errorData);
-        throw new Error(`プロジェクト更新失敗 (ステータス: ${res.status})`);
-      }
-      const result = await res.json();
+      // ★ fetch → api.projects.updateProject
+      const result = await api.projects.updateProject(project_id, payload);
       console.log('更新結果:', result);
 
       if (!result.success) {
         throw new Error(result.message || 'プロジェクト更新に失敗しました');
       }
-
       setSuccess(true);
     } catch (err: any) {
       setError(err.message || '更新時にエラーが発生しました');
@@ -191,7 +154,6 @@ function ProjectEdit() {
       <h1 className="title1">プロジェクト編集</h1>
 
       <div className="editform">
-        {/* react-hook-form の handleSubmit を使う */}
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           {/* name */}
           <div>

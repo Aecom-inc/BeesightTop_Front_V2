@@ -4,6 +4,9 @@ import Footer from '../components/footer';
 import SearchBar from '../components/searchBar';
 import Pagination from '../components/Pagination';
 
+// ★ 追加
+import api from '../services/api';
+
 // 承認データの型
 interface Approval {
   auth_history_id: string;
@@ -21,7 +24,6 @@ interface Approval {
   authenticate_at: string;
 }
 
-// ページネーションの型
 interface PaginationLink {
   url: string | null;
   label: string;
@@ -40,7 +42,6 @@ interface PaginationData {
   links: PaginationLink[];
 }
 
-// サーバーから返されるレスポンスの型
 interface AuthHistoryResponse {
   success: boolean;
   message: string;
@@ -67,22 +68,11 @@ const AuthHistory: React.FC = () => {
   const fetchHistories = async (page: number, query: string) => {
     setLoading(true);
     setError(null);
+
     try {
-      // サーバーが「?page=N&search=XXX」で検索対応している想定
-      const url = `https://85ef-163-44-52-101.ngrok-free.app/api/auth/histories?page=${page}&search=${encodeURIComponent(
-        query,
-      )}`;
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'ngrok-skip-browser-warning': 'true',
-        },
-      });
-      if (!response.ok) {
-        throw new Error(`データ取得に失敗しました (ステータス: ${response.status})`);
-      }
-      const result: AuthHistoryResponse = await response.json();
+      // ★ ここを fetch → api.authHistory.getHistories に変更
+      const result: AuthHistoryResponse = await api.authHistory.getHistories(page, query);
+
       if (result.success) {
         setApprovalData(result.data);
         setPagination(result.pagination);
@@ -99,10 +89,10 @@ const AuthHistory: React.FC = () => {
   // ② マウント時 + currentPage / searchQuery が変わるたびにAPIリクエスト
   useEffect(() => {
     fetchHistories(currentPage, searchQuery);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPage, searchQuery]);
 
-  // ③ 検索バーから呼ばれるコールバック
-  // 入力が変わるたびに searchQuery を更新 => useEffectで再fetch
+  // ③ 検索バーからのコールバック
   const handleSearch = (query: string) => {
     setSearchQuery(query);
     setCurrentPage(1); // 新しい検索なので1ページ目に戻す
@@ -125,7 +115,8 @@ const AuthHistory: React.FC = () => {
           <thead>
             <tr>
               <th className="w-1/7">
-                ステータス/<br />
+                ステータス/
+                <br />
                 プロジェクト名
               </th>
               <th>API Key</th>

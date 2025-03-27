@@ -29,7 +29,7 @@ const UserRegister: React.FC = () => {
     setSuccess(false);
 
     try {
-      const response = await fetch('https://85ef-163-44-52-101.ngrok-free.app/api/users', {
+      const response = await fetch('https://7fc0-163-44-52-101.ngrok-free.app/api/users', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

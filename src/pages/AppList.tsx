@@ -2,39 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Footer from '../components/footer';
 import { AppleIcon } from 'lucide-react';
+import api from '../services/api';
+import { AppData } from '../services/api';
 
-// ライセンス型
-interface AppLicense {
-  license_id: number;
-  name: string;
-  license_key: string;
-  used: number;
-  limit: number;
-  expired_at: string | null;
-}
-
-// サプライヤー型
-interface AppSupplier {
-  supplier_id: number;
-  name: string;
-}
-
-// アプリ情報の型
-interface AppData {
-  app_id: number;
-  name: string;
-  version: string;
-  description: string | null;
-  status: string;
-  licenses: AppLicense[];
-  supplier: AppSupplier;
-}
-
-interface AppResponse {
-  success: boolean;
-  message: string;
-  data: AppData[];
-}
 
 const AppList: React.FC = () => {
   const [apps, setApps] = useState<AppData[]>([]);
@@ -45,33 +15,15 @@ const AppList: React.FC = () => {
   useEffect(() => {
     const fetchApps = async () => {
       try {
-        const response = await fetch('https://85ef-163-44-52-101.ngrok-free.app/api/apps', {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'ngrok-skip-browser-warning': 'true',
-          },
-        });
-
-        if (!response.ok) {
-          throw new Error(`HTTP エラー (ステータス: ${response.status})`);
-        }
-
-        const result: AppResponse = await response.json();
-        console.log('AppList API result:', result);
-
-        if (result.success) {
-          setApps(result.data);
-        } else {
-          setError('データの取得に失敗しました');
-        }
+        const data = await api.app.getApps();
+        setApps(data);
       } catch (err: any) {
+        console.error(err);
         setError('データの取得中にエラーが発生しました');
       } finally {
         setLoading(false);
       }
     };
-
     fetchApps();
   }, []);
 
@@ -82,26 +34,8 @@ const AppList: React.FC = () => {
     }
 
     try {
-      const response = await fetch(`https://85ef-163-44-52-101.ngrok-free.app/api/apps/${appId}`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          'ngrok-skip-browser-warning': 'true',
-        },
-      });
-
-      if (!response.ok) {
-        const text = await response.text();
-        console.log('削除失敗レスポンス:', text);
-        throw new Error(`アプリ削除失敗 (ステータス: ${response.status})`);
-      }
-
-      const result = await response.json();
-      console.log('削除結果:', result);
-
-      if (!result.success) {
-        throw new Error(result.message || 'アプリ削除に失敗しました');
-      }
+      // ここをaxios利用のappServiceに変更
+      await api.app.deleteApp(appId);
 
       // 削除が成功したら、apps ステートから対象を取り除いて画面を更新
       setApps((prev) => prev.filter((app) => app.app_id !== appId));
@@ -131,27 +65,30 @@ const AppList: React.FC = () => {
         <table className="text-sm tablepadding1 tableborder1">
           <thead>
             <tr>
-              <th>アプリ名</th>
+              <th>アプリ名（アプリID）</th>
               <th>バージョン</th>
-              <th>ライセンスID</th>
+              <th>ライセンスID（ライセンスネーム）</th>
               <th>ステータス</th>
               <th>説明</th>
-              <th className='text-center'>操作</th>
+              <th className="text-center">操作</th>
             </tr>
           </thead>
           <tbody>
             {apps.map((app) => (
               <tr key={app.app_id} className="hover:bg-gray-50">
-                <td>{app.name}</td>
+                <td>
+                  {app.name}（{app.app_id}）
+                </td>
                 <td>{app.version}</td>
                 <td>
                   {app.licenses && app.licenses.length > 0
                     ? app.licenses.map((lic) => lic.license_id).join(', ')
                     : 'ライセンスなし'}
-                  {/* <br />
-                 （ {app.licenses && app.licenses.length > 0
+                  <br />（
+                  {app.licenses && app.licenses.length > 0
                     ? app.licenses.map((lic) => lic.name).join(', ')
-                    : 'ライセンスなし'}） */}
+                    : 'ライセンスなし'}
+                  ）
                 </td>
                 <td>
                   <span className="bg-blue-100 px-2 py-1 rounded-full">{app.status}</span>
@@ -160,10 +97,10 @@ const AppList: React.FC = () => {
                 <td>
                   <div className="flex flex-col items-center space-y-2">
                     <button className="edit_b" onClick={() => navigate(`/apps/edit/${app.app_id}`)}>
-                    編集
+                      編集
                     </button>
                     <button className="delete_b" onClick={() => handleDelete(app.app_id)}>
-                    削除
+                      削除
                     </button>
                   </div>
                 </td>

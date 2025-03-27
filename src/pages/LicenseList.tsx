@@ -112,9 +112,9 @@ const LicenseList: React.FC = () => {
                       修正
                     </button>
                     {/* 削除ボタン */}
-                    {/* <button className="delete_b" onClick={() => handleDelete(license.license_id)}>
+                    <button className="delete_b" onClick={() => handleDelete(license.license_id)}>
                       削除
-                    </button> */}
+                    </button>
                   </div>
                 </td>
               </tr>

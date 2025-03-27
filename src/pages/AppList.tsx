@@ -99,9 +99,9 @@ const AppList: React.FC = () => {
                     <button className="edit_b" onClick={() => navigate(`/apps/edit/${app.app_id}`)}>
                       編集
                     </button>
-                    <button className="delete_b" onClick={() => handleDelete(app.app_id)}>
+                    {/* <button className="delete_b" onClick={() => handleDelete(app.app_id)}>
                       削除
-                    </button>
+                    </button> */}
                   </div>
                 </td>
               </tr>

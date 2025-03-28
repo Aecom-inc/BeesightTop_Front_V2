@@ -249,7 +249,7 @@ const ProjectDetail: React.FC = () => {
               {/* <th className="py-2 px-4">History ID</th> */}
               <th className="py-2 px-4">端末名</th>
               <th className="py-2 px-4">シリアルNo</th>
-              <th className="py-2 px-4">操作</th>
+              <th className="py-2 px-4">アクション</th>
               <th className="py-2 px-4">結果</th>
               <th className="py-2 px-4">メッセージ</th>
               <th className="py-2 px-4">アプリ情報</th>
@@ -262,7 +262,19 @@ const ProjectDetail: React.FC = () => {
                 {/* <td className="py-2 px-4">{hist.auth_history_id}</td> */}
                 <td className="py-2 px-4">{hist.terminal_name}</td>
                 <td className="py-2 px-4">{hist.serial_no}</td>
-                <td className="py-2 px-4">{hist.action}</td>
+                <td className="py-2 px-4">
+                  <span
+                    className={`px-3 py-1 rounded-full text-center ${
+                      hist.action === 'activate'
+                        ? 'bg-blue-100'
+                        : hist.action === 'deactivate'
+                          ? 'bg-red-100'
+                          : 'bg-yellow-100'
+                    }`}
+                  >
+                    {hist.action}
+                  </span>
+                </td>
                 <td className="py-2 px-4">
                   <span
                     className={`px-3 py-1 rounded-full text-center ${

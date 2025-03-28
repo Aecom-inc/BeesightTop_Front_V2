@@ -114,11 +114,7 @@ const AuthHistory: React.FC = () => {
         <table className="text-sm tableborder1 tablepadding1">
           <thead>
             <tr>
-              <th className="w-1/7">
-                ステータス/
-                <br />
-                プロジェクト名
-              </th>
+              <th className="w-1/7">アクション/<br />プロジェクト名</th>
               <th>API Key</th>
               <th>端末名</th>
               <th>シリアル番号</th>

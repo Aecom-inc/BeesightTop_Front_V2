@@ -107,7 +107,7 @@ const ProjectList: React.FC = () => {
         <table className="text-sm tableborder1 tablepadding1">
           <thead>
             <tr>
-              <th>ステータス/<br />プロジェクト名</th>
+              <th>アクション/<br />プロジェクト名</th>
               <th className="w-1/8">認証</th>
               <th className="w-1/6">利用開始 /<br />終了日</th>
               <th className="w-1/6">API Key</th>

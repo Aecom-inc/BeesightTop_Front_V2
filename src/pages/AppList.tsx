@@ -68,7 +68,7 @@ const AppList: React.FC = () => {
               <th>アプリ名（アプリID）</th>
               <th>バージョン</th>
               <th>ライセンスID（ライセンスネーム）</th>
-              <th>ステータス</th>
+              <th>アクション</th>
               <th>説明</th>
               <th className="text-center">操作</th>
             </tr>

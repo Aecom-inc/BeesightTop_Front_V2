@@ -90,7 +90,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const response = await axios<T>(config);
       return response.data;
     } catch (error: any) {
-      // 401エラーの場合は認証切れとしてログアウト
       if (error.response && error.response.status === 401) {
         logout();
       }

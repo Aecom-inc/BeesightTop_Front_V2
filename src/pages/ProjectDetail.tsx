@@ -175,16 +175,30 @@ const ProjectDetail: React.FC = () => {
       {/* プロジェクト詳細 */}
       {project ? (
         <div className="bg-white p-6 rounded-lg mb-8">
-          <h2 className="text-xl font-bold">{project.name}</h2>
-          {projectError && <p className="text-red-500">{projectError}</p>}
-          <p className="text-gray-600">API Key: {project.api_key}</p>
-          <p className="text-gray-600">ステータス: {project.status}</p>
-          <p className="text-gray-600">
-            認証回数 / 端末制限: {project.activated_count} / {project.terminal_limit}
+          <p className=" mb-3 font-bold">
+            <span
+              className={`px-3 py-1 rounded-full text-center ${
+                project.status === 'active'
+                  ? 'bg-blue-100'
+                  : project.status === 'inactive'
+                    ? 'bg-red-100'
+                    : 'bg-yellow-100'
+              }`}
+            >
+              {' '}
+              {project.status}
+            </span>
           </p>
-          <p className="text-gray-600">開始日: {project.open_at}</p>
-          <p className="text-gray-600">終了日: {project.close_at}</p>
-          <p className="text-gray-600">説明: {project.description}</p>
+          <h2 className="text-xl font-bold mb-3">{project.name}</h2>
+          {projectError && <p className="text-red-500">{projectError}</p>}
+          <p className="mb-2">API Key：{project.api_key}</p>
+          <p className=" mb-2">
+            {/* 認証回数/端末制限：{project.activated_count} / {project.terminal_limit} */}
+            端末制限：{project.terminal_limit}
+          </p>
+          <p className="mb-2">開始日：{project.open_at}</p>
+          <p className="mb-2">終了日：{project.close_at}</p>
+          <p className="mb-2">{project.description}</p>
         </div>
       ) : (
         <p className="text-gray-500">{projectError || 'プロジェクトが見つかりません'}</p>
@@ -232,7 +246,7 @@ const ProjectDetail: React.FC = () => {
         <table className="w-full text-left text-sm tableborder1 bg-white tablepadding1">
           <thead>
             <tr className="border-b">
-              <th className="py-2 px-4">History ID</th>
+              {/* <th className="py-2 px-4">History ID</th> */}
               <th className="py-2 px-4">端末名</th>
               <th className="py-2 px-4">シリアルNo</th>
               <th className="py-2 px-4">操作</th>
@@ -245,11 +259,23 @@ const ProjectDetail: React.FC = () => {
           <tbody>
             {authHistories.map((hist) => (
               <tr key={hist.auth_history_id} className="border-b hover:bg-gray-50">
-                <td className="py-2 px-4">{hist.auth_history_id}</td>
+                {/* <td className="py-2 px-4">{hist.auth_history_id}</td> */}
                 <td className="py-2 px-4">{hist.terminal_name}</td>
                 <td className="py-2 px-4">{hist.serial_no}</td>
                 <td className="py-2 px-4">{hist.action}</td>
-                <td className="py-2 px-4">{hist.result}</td>
+                <td className="py-2 px-4">
+                  <span
+                    className={`px-3 py-1 rounded-full text-center ${
+                      hist.result === 'success'
+                        ? 'bg-green-100'
+                        : hist.result === 'failure'
+                          ? 'bg-red-100'
+                          : 'bg-yellow-100'
+                    }`}
+                  >
+                    {hist.result}
+                  </span>
+                </td>
                 <td className="py-2 px-4">{hist.auth_msg}</td>
                 <td className="py-2 px-4">
                   {hist.app_name} v{hist.app_version}

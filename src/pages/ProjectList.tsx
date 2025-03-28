@@ -107,19 +107,9 @@ const ProjectList: React.FC = () => {
         <table className="text-sm tableborder1 tablepadding1">
           <thead>
             <tr>
-              <th>
-                ステータス/
-                <br />
-                プロジェクト名
-              </th>
-              <th className="w-1/8">
-                認証回数 /<br />
-                可能数
-              </th>
-              <th className="w-1/6">
-                利用開始 /<br />
-                終了日
-              </th>
+              <th>ステータス/<br />プロジェクト名</th>
+              <th className="w-1/8">認証</th>
+              <th className="w-1/6">利用開始 /<br />終了日</th>
               <th className="w-1/6">API Key</th>
               <th className="w-1/6">補足情報</th>
               <th className="w-1/8 text-center">操作</th>

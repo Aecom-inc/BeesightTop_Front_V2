@@ -87,7 +87,7 @@ const LicenseList: React.FC = () => {
             <tr>
               <th className="w-1/6">ライセンス名</th>
               <th className="w-1/6">ID：ライセンス発行企業</th>
-              <th className="w-1/6">使用数 / 制限</th>
+              <th className="w-1/6">認証</th>
               <th className="w-1/6">期限</th>
               <th className="w-1/6">補足情報</th>
               <th className="w-1/6 text-center">操作</th>
